@@ -1374,18 +1374,17 @@ loadConfigKeys()
 buildGui()
 loadConfigState()
 -- ============================================
--- BOUTONS MOBILES - VERSION AVEC HITBOX FIXE
+-- 8 BOUTONS MOBILES - VERSION STABLE
 -- ============================================
 
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
-local TS = game:GetService("TweenService")
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MobileButtons"
 screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true -- Important pour mobile !
+screenGui.IgnoreGuiInset = true
 pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
 if not screenGui.Parent then
     screenGui.Parent = LP:WaitForChild("PlayerGui")
@@ -1394,23 +1393,31 @@ end
 -- Panneau principal
 local buttonPanel = Instance.new("Frame")
 buttonPanel.Name = "ButtonPanel"
-buttonPanel.Size = UDim2.new(0, 220, 0, 230)
-buttonPanel.Position = UDim2.new(0.5, -110, 0.65, 0) -- En bas au milieu
+buttonPanel.Size = UDim2.new(0, 210, 0, 240)
+buttonPanel.Position = UDim2.new(0.5, -105, 0.65, 0)
 buttonPanel.BackgroundTransparency = 1
 buttonPanel.BorderSizePixel = 0
 buttonPanel.Parent = screenGui
 
--- Layout
-local gridLayout = Instance.new("UIGridLayout")
-gridLayout.Parent = buttonPanel
-gridLayout.CellSize = UDim2.new(0, 100, 0, 55)
-gridLayout.CellPadding = UDim2.new(0, 8, 0, 6)
-gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-gridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+-- Créer chaque bouton manuellement avec positions fixes (pas de GridLayout buggé)
+local positions = {
+    {row=0, col=0, text1="DROP", text2="BRAINROT", key=Enum.KeyCode.X, state="drop"},
+    {row=0, col=1, text1="BAT", text2="AIMBOT", key=Enum.KeyCode.E, state="bat"},
+    {row=1, col=0, text1="AUTO", text2="LEFT", key=Enum.KeyCode.Z, state="autoLeft"},
+    {row=1, col=1, text1="AUTO", text2="RIGHT", key=Enum.KeyCode.C, state="autoRight"},
+    {row=2, col=0, text1="TP", text2="DOWN", key=Enum.KeyCode.F, state="tp"},
+    {row=2, col=1, text1="CARRY", text2="SPD", key=Enum.KeyCode.Q, state="carry"},
+    {row=3, col=0, text1="LAGGER", text2="CARRY", key=Enum.KeyCode.R, state="laggerCarry"},
+    {row=3, col=1, text1="LAGGER", text2="MODE", key=Enum.KeyCode.R, state="laggerMode"},
+}
+
+local btnW, btnH = 100, 55
+local spacing = 8
+local offsetX = (210 - (btnW * 2 + spacing)) / 2 -- Centrer
 
 -- État des toggles
 local toggleStates = {
-    drop = false, autoLeft = false, bat = false, autoRight = false,
+    drop = false, bat = false, autoLeft = false, autoRight = false,
     tp = false, carry = false, laggerCarry = false, laggerMode = false
 }
 
@@ -1423,34 +1430,35 @@ local function sendKeyPress(keyCode)
     end
 end
 
--- Fonction pour créer un bouton avec une grosse zone de toucher
-local function createBigButton(text1, text2, keyCode, stateKey)
-    -- Conteneur du bouton (pour la hitbox)
+-- Créer chaque bouton
+for _, btnData in ipairs(positions) do
+    local x = offsetX + (btnData.col * (btnW + spacing))
+    local y = btnData.row * (btnH + spacing)
+    
+    -- Conteneur
     local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
+    container.Size = UDim2.new(0, btnW, 0, btnH)
+    container.Position = UDim2.new(0, x, 0, y)
     container.BackgroundTransparency = 1
     container.Parent = buttonPanel
     
-    -- Le vrai bouton (visuel)
+    -- Bouton visuel
     local btn = Instance.new("Frame")
-    btn.Size = UDim2.new(1, -4, 1, -4)
-    btn.Position = UDim2.new(0, 2, 0, 2)
+    btn.Size = UDim2.new(1, 0, 1, 0)
     btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     btn.BorderSizePixel = 0
     btn.Parent = container
     
-    -- Coins arrondis
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = btn
     
-    -- Ombre/bordure
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(50, 50, 60)
     stroke.Thickness = 1.5
     stroke.Parent = btn
     
-    -- Zone tactile séparée (énorme hitbox)
+    -- Zone tactile
     local touchZone = Instance.new("TextButton")
     touchZone.Size = UDim2.new(1, 0, 1, 0)
     touchZone.BackgroundTransparency = 1
@@ -1463,7 +1471,7 @@ local function createBigButton(text1, text2, keyCode, stateKey)
     topText.Size = UDim2.new(1, 0, 0.6, 0)
     topText.Position = UDim2.new(0, 0, 0, 4)
     topText.BackgroundTransparency = 1
-    topText.Text = text1
+    topText.Text = btnData.text1
     topText.TextColor3 = Color3.fromRGB(255, 255, 255)
     topText.Font = Enum.Font.GothamBold
     topText.TextSize = 15
@@ -1475,7 +1483,7 @@ local function createBigButton(text1, text2, keyCode, stateKey)
     bottomText.Size = UDim2.new(1, 0, 0.4, 0)
     bottomText.Position = UDim2.new(0, 0, 0.6, -2)
     bottomText.BackgroundTransparency = 1
-    bottomText.Text = text2
+    bottomText.Text = btnData.text2
     bottomText.TextColor3 = Color3.fromRGB(160, 160, 160)
     bottomText.Font = Enum.Font.Gotham
     bottomText.TextSize = 10
@@ -1484,7 +1492,8 @@ local function createBigButton(text1, text2, keyCode, stateKey)
     
     -- Mise à jour visuelle
     local function updateVisual()
-        if toggleStates[stateKey] then
+        local isOn = toggleStates[btnData.state]
+        if isOn then
             btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             topText.TextColor3 = Color3.fromRGB(0, 0, 0)
             bottomText.TextColor3 = Color3.fromRGB(50, 50, 50)
@@ -1497,50 +1506,29 @@ local function createBigButton(text1, text2, keyCode, stateKey)
         end
     end
     
-    -- Animation au toucher (feedback visuel immédiat)
+    -- Animation
     local function animatePress()
         local originalColor = btn.BackgroundColor3
-        local tempColor = toggleStates[stateKey] and Color3.fromRGB(200, 200, 200) or Color3.fromRGB(50, 50, 55)
-        
-        btn.BackgroundColor3 = tempColor
+        btn.BackgroundColor3 = toggleStates[btnData.state] and Color3.fromRGB(200, 200, 200) or Color3.fromRGB(50, 50, 55)
         task.wait(0.08)
         btn.BackgroundColor3 = originalColor
     end
     
-    -- Gestion du toucher (plusieurs événements pour être sûr)
+    -- Action
     local function onTap()
         animatePress()
-        toggleStates[stateKey] = not toggleStates[stateKey]
+        toggleStates[btnData.state] = not toggleStates[btnData.state]
         updateVisual()
-        sendKeyPress(keyCode)
-        
-        -- Vibration
-        pcall(function() 
-            if UIS.Vibrate then UIS:Vibrate() end
-        end)
+        sendKeyPress(btnData.key)
+        pcall(function() if UIS.Vibrate then UIS:Vibrate() end end)
     end
     
-    -- TOUS les événements possibles pour mobile
     touchZone.MouseButton1Click:Connect(onTap)
     touchZone.TouchTap:Connect(onTap)
-    touchZone.TouchLongPress:Connect(onTap) -- Aussi pour les appuis longs
     touchZone.Activated:Connect(onTap)
-    
-    -- Aussi sur le bouton visuel au cas où
-    btn.MouseButton1Click:Connect(onTap)
     
     updateVisual()
 end
-
--- Créer les boutons (dans l'ordre)
-createBigButton("DROP", "BRAINROT", Enum.KeyCode.X, "drop")
-createBigButton("AUTO", "LEFT", Enum.KeyCode.Z, "autoLeft")
-createBigButton("BAT", "AIMBOT", Enum.KeyCode.E, "bat")
-createBigButton("AUTO", "RIGHT", Enum.KeyCode.C, "autoRight")
-createBigButton("TP", "DOWN", Enum.KeyCode.F, "tp")
-createBigButton("CARRY", "SPD", Enum.KeyCode.Q, "carry")
-createBigButton("LAGGER", "CARRY", Enum.KeyCode.R, "laggerCarry")
-createBigButton("LAGGER", "MODE", Enum.KeyCode.R, "laggerMode")
 
 -- Rendre le panneau déplaçable
 local dragging = false
@@ -1568,4 +1556,4 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
-print("✅ Boutons corrigés ! Plus de hitbox et feedback visuel")
+print("✅ 8 boutons créés ! Disposition en grille 4x2")
