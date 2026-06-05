@@ -1374,198 +1374,173 @@ loadConfigKeys()
 buildGui()
 loadConfigState()
 -- ============================================
--- BOUTONS MOBILES TOGGLE (Blanc/Noir)
+-- BOUTONS MOBILES - VERSION AVEC HITBOX FIXE
 -- ============================================
 
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local TS = game:GetService("TweenService")
 
--- Créer le panneau principal
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MobileTogglePanel"
+screenGui.Name = "MobileButtons"
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true -- Important pour mobile !
 pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
 if not screenGui.Parent then
     screenGui.Parent = LP:WaitForChild("PlayerGui")
 end
 
--- Panneau des boutons (4x4)
+-- Panneau principal
 local buttonPanel = Instance.new("Frame")
 buttonPanel.Name = "ButtonPanel"
-buttonPanel.Size = UDim2.new(0, 340, 0, 340)
-buttonPanel.Position = UDim2.new(0.5, -170, 0.5, -170)
-buttonPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-buttonPanel.BackgroundTransparency = 0.15
+buttonPanel.Size = UDim2.new(0, 220, 0, 230)
+buttonPanel.Position = UDim2.new(0.5, -110, 0.65, 0) -- En bas au milieu
+buttonPanel.BackgroundTransparency = 1
 buttonPanel.BorderSizePixel = 0
 buttonPanel.Parent = screenGui
 
--- Coins arrondis
-local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 16)
-panelCorner.Parent = buttonPanel
-
--- Grid Layout 4x4
+-- Layout
 local gridLayout = Instance.new("UIGridLayout")
 gridLayout.Parent = buttonPanel
-gridLayout.CellSize = UDim2.new(0, 75, 0, 75)
-gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+gridLayout.CellSize = UDim2.new(0, 100, 0, 55)
+gridLayout.CellPadding = UDim2.new(0, 8, 0, 6)
 gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-gridLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-
--- Padding interne
-local padding = Instance.new("UIPadding")
-padding.PaddingTop = UDim.new(0, 12)
-padding.PaddingBottom = UDim.new(0, 12)
-padding.PaddingLeft = UDim.new(0, 12)
-padding.PaddingRight = UDim.new(0, 12)
-padding.Parent = buttonPanel
+gridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
 -- État des toggles
 local toggleStates = {
-    dropBrainrot = false,
-    autoLeft = false,
-    batAimbot = false,
-    autoRight = false,
-    tpDown = false,
-    carrySpeed = false,
-    laggerCarry = false,
-    laggerMode = false
+    drop = false, autoLeft = false, bat = false, autoRight = false,
+    tp = false, carry = false, laggerCarry = false, laggerMode = false
 }
 
--- Fonction pour envoyer une touche simulée
+-- Fonction pour envoyer une touche
 local function sendKeyPress(keyCode)
     for _, conn in pairs(getconnections(UIS.InputBegan)) do
         pcall(function() 
-            conn.Function({KeyCode = keyCode, UserInputType = Enum.UserInputType.Keyboard}, false) 
+            conn.Function({KeyCode = keyCode, UserInputType = Enum.UserInputType.Keyboard}, false)
         end)
     end
 end
 
--- Fonction pour créer un bouton avec texte sur 2 lignes
-local function createToggleButton(textLine1, textLine2, keyCode, stateKey)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Noir par défaut (désactivé)
-    btn.BackgroundTransparency = 0.3
+-- Fonction pour créer un bouton avec une grosse zone de toucher
+local function createBigButton(text1, text2, keyCode, stateKey)
+    -- Conteneur du bouton (pour la hitbox)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = buttonPanel
+    
+    -- Le vrai bouton (visuel)
+    local btn = Instance.new("Frame")
+    btn.Size = UDim2.new(1, -4, 1, -4)
+    btn.Position = UDim2.new(0, 2, 0, 2)
+    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     btn.BorderSizePixel = 0
-    btn.Text = ""
-    btn.Parent = buttonPanel
+    btn.Parent = container
     
     -- Coins arrondis
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 12)
-    btnCorner.Parent = btn
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = btn
     
-    -- Texte ligne 1
-    local text1 = Instance.new("TextLabel")
-    text1.Size = UDim2.new(1, 0, 0.5, -2)
-    text1.Position = UDim2.new(0, 0, 0, 4)
-    text1.BackgroundTransparency = 1
-    text1.Text = textLine1
-    text1.TextColor3 = Color3.fromRGB(255, 255, 255)
-    text1.Font = Enum.Font.GothamBold
-    text1.TextSize = 14
-    text1.TextScaled = true
-    text1.TextWrapped = true
-    text1.Parent = btn
+    -- Ombre/bordure
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(50, 50, 60)
+    stroke.Thickness = 1.5
+    stroke.Parent = btn
     
-    -- Texte ligne 2
-    local text2 = Instance.new("TextLabel")
-    text2.Size = UDim2.new(1, 0, 0.5, -2)
-    text2.Position = UDim2.new(0, 0, 0.5, -2)
-    text2.BackgroundTransparency = 1
-    text2.Text = textLine2
-    text2.TextColor3 = Color3.fromRGB(200, 200, 200)
-    text2.Font = Enum.Font.Gotham
-    text2.TextSize = 11
-    text2.TextScaled = true
-    text2.TextWrapped = true
-    text2.Parent = btn
+    -- Zone tactile séparée (énorme hitbox)
+    local touchZone = Instance.new("TextButton")
+    touchZone.Size = UDim2.new(1, 0, 1, 0)
+    touchZone.BackgroundTransparency = 1
+    touchZone.Text = ""
+    touchZone.AutoButtonColor = false
+    touchZone.Parent = container
     
-    -- Fonction pour mettre à jour l'apparence
-    local function updateAppearance()
+    -- Texte haut
+    local topText = Instance.new("TextLabel")
+    topText.Size = UDim2.new(1, 0, 0.6, 0)
+    topText.Position = UDim2.new(0, 0, 0, 4)
+    topText.BackgroundTransparency = 1
+    topText.Text = text1
+    topText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    topText.Font = Enum.Font.GothamBold
+    topText.TextSize = 15
+    topText.TextScaled = true
+    topText.Parent = btn
+    
+    -- Texte bas
+    local bottomText = Instance.new("TextLabel")
+    bottomText.Size = UDim2.new(1, 0, 0.4, 0)
+    bottomText.Position = UDim2.new(0, 0, 0.6, -2)
+    bottomText.BackgroundTransparency = 1
+    bottomText.Text = text2
+    bottomText.TextColor3 = Color3.fromRGB(160, 160, 160)
+    bottomText.Font = Enum.Font.Gotham
+    bottomText.TextSize = 10
+    bottomText.TextScaled = true
+    bottomText.Parent = btn
+    
+    -- Mise à jour visuelle
+    local function updateVisual()
         if toggleStates[stateKey] then
-            btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Blanc (activé)
-            btn.BackgroundTransparency = 0.15
-            text1.TextColor3 = Color3.fromRGB(0, 0, 0)
-            text2.TextColor3 = Color3.fromRGB(50, 50, 50)
+            btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            topText.TextColor3 = Color3.fromRGB(0, 0, 0)
+            bottomText.TextColor3 = Color3.fromRGB(50, 50, 50)
+            stroke.Color = Color3.fromRGB(220, 220, 220)
         else
-            btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Noir (désactivé)
-            btn.BackgroundTransparency = 0.3
-            text1.TextColor3 = Color3.fromRGB(255, 255, 255)
-            text2.TextColor3 = Color3.fromRGB(180, 180, 180)
+            btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+            topText.TextColor3 = Color3.fromRGB(255, 255, 255)
+            bottomText.TextColor3 = Color3.fromRGB(150, 150, 150)
+            stroke.Color = Color3.fromRGB(50, 50, 60)
         end
     end
     
-    -- Gestion du clic/touch
-    local function onToggle()
+    -- Animation au toucher (feedback visuel immédiat)
+    local function animatePress()
+        local originalColor = btn.BackgroundColor3
+        local tempColor = toggleStates[stateKey] and Color3.fromRGB(200, 200, 200) or Color3.fromRGB(50, 50, 55)
+        
+        btn.BackgroundColor3 = tempColor
+        task.wait(0.08)
+        btn.BackgroundColor3 = originalColor
+    end
+    
+    -- Gestion du toucher (plusieurs événements pour être sûr)
+    local function onTap()
+        animatePress()
         toggleStates[stateKey] = not toggleStates[stateKey]
-        updateAppearance()
+        updateVisual()
+        sendKeyPress(keyCode)
         
-        -- Envoyer la touche correspondante
-        if toggleStates[stateKey] then
-            sendKeyPress(keyCode)
-        else
-            -- Renvoyer la même touche pour désactiver (certains toggles fonctionnent comme ça)
-            sendKeyPress(keyCode)
-        end
-        
-        -- Feedback haptique (vibration si disponible)
-        pcall(function() game:GetService("UserInputService"):Vibrate() end)
+        -- Vibration
+        pcall(function() 
+            if UIS.Vibrate then UIS:Vibrate() end
+        end)
     end
     
-    btn.MouseButton1Click:Connect(onToggle)
-    btn.TouchTap:Connect(onToggle)
+    -- TOUS les événements possibles pour mobile
+    touchZone.MouseButton1Click:Connect(onTap)
+    touchZone.TouchTap:Connect(onTap)
+    touchZone.TouchLongPress:Connect(onTap) -- Aussi pour les appuis longs
+    touchZone.Activated:Connect(onTap)
     
-    updateAppearance()
-    return btn
+    -- Aussi sur le bouton visuel au cas où
+    btn.MouseButton1Click:Connect(onTap)
+    
+    updateVisual()
 end
 
--- Créer les 8 boutons (positions selon l'image)
--- Ligne 1: DROP BRAINROT | BAT AIMBOT
--- Ligne 2: AUTO LEFT     | AUTO RIGHT  
--- Ligne 3: TP DOWN       | CARRY SPEED
--- Ligne 4: LAGGER CARRY  | LAGGER MODE
-
-createToggleButton("DROP", "BRAINROT", Enum.KeyCode.X, "dropBrainrot")      -- X
-createToggleButton("AUTO", "LEFT", Enum.KeyCode.Z, "autoLeft")              -- Z
-createToggleButton("BAT", "AIMBOT", Enum.KeyCode.E, "batAimbot")            -- E
-createToggleButton("AUTO", "RIGHT", Enum.KeyCode.C, "autoRight")            -- C
-createToggleButton("TP", "DOWN", Enum.KeyCode.F, "tpDown")                  -- F
-createToggleButton("CARRY", "SPD", Enum.KeyCode.Q, "carrySpeed")            -- Q
-createToggleButton("LAGGER", "CARRY", Enum.KeyCode.R, "laggerCarry")        -- R (premier appui)
-createToggleButton("LAGGER", "MODE", Enum.KeyCode.R, "laggerMode")          -- R (deuxième appui)
-
--- Bouton pour fermer/ouvrir le panneau (petit bouton flottant)
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 50, 0, 50)
-toggleBtn.Position = UDim2.new(1, -60, 0.85, -25)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-toggleBtn.BackgroundTransparency = 0.4
-toggleBtn.Text = "🎮"
-toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 24
-toggleBtn.Parent = screenGui
-
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(1, 0)
-toggleCorner.Parent = toggleBtn
-
-local panelVisible = true
-toggleBtn.MouseButton1Click:Connect(function()
-    panelVisible = not panelVisible
-    buttonPanel.Visible = panelVisible
-    toggleBtn.BackgroundColor3 = panelVisible and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(50, 150, 50)
-end)
-
-toggleBtn.TouchTap:Connect(function()
-    panelVisible = not panelVisible
-    buttonPanel.Visible = panelVisible
-    toggleBtn.BackgroundColor3 = panelVisible and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(50, 150, 50)
-end)
+-- Créer les boutons (dans l'ordre)
+createBigButton("DROP", "BRAINROT", Enum.KeyCode.X, "drop")
+createBigButton("AUTO", "LEFT", Enum.KeyCode.Z, "autoLeft")
+createBigButton("BAT", "AIMBOT", Enum.KeyCode.E, "bat")
+createBigButton("AUTO", "RIGHT", Enum.KeyCode.C, "autoRight")
+createBigButton("TP", "DOWN", Enum.KeyCode.F, "tp")
+createBigButton("CARRY", "SPD", Enum.KeyCode.Q, "carry")
+createBigButton("LAGGER", "CARRY", Enum.KeyCode.R, "laggerCarry")
+createBigButton("LAGGER", "MODE", Enum.KeyCode.R, "laggerMode")
 
 -- Rendre le panneau déplaçable
 local dragging = false
@@ -1593,145 +1568,4 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
-print("✅ 8 boutons toggle ajoutés !")
-print("📱 Blanc = activé | Noir = désactivé")titleText.TextScaled = true
-titleText.Font = Enum.Font.GothamBold
-titleText.TextWrapped = true
-titleText.Parent = titleBar
-
--- Button Frame
-local buttonFrame = Instance.new("Frame")
-buttonFrame.Name = "ButtonFrame"
-buttonFrame.Size = UDim2.new(1, -20, 0, 35)
-buttonFrame.Position = UDim2.new(0, 10, 0, 30)
-buttonFrame.BackgroundTransparency = 1
-buttonFrame.Parent = mainFrame
-
--- Toggle Button
-local toggleButton = Instance.new("TextButton")
-toggleButton.Name = "ToggleButton"
-toggleButton.Size = UDim2.new(1, 0, 1, 0)
-toggleButton.BackgroundColor3 = Color3.fromRGB(220, 30, 30) -- Red (inactive)
-toggleButton.BorderSizePixel = 2
-toggleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Text = "🔒 BAT LOCK"
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.TextScaled = true
-toggleButton.Font = Enum.Font.GothamBold
-toggleButton.Parent = buttonFrame
-
--- Add corner rounding
-local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 5)
-uiCorner.Parent = mainFrame
-
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 5)
-titleCorner.Parent = titleBar
-
--- Dragging functionality
-local dragging = false
-local dragStart = nil
-local startPos = nil
-
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
--- Update button color function
-local function updateButtonColor()
-    if batAimbotEnabled then
-        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50) -- Green (active)
-        toggleButton.Text = "🔓 BAT LOCK [ON]"
-    else
-        toggleButton.BackgroundColor3 = Color3.fromRGB(220, 30, 30) -- Red (inactive)
-        toggleButton.Text = "🔒 BAT LOCK [OFF]"
-    end
-end
-
--- Toggle function
-local function onToggle()
-    toggleBatAimbot()
-    updateButtonColor()
-end
-
--- Connect button click
-toggleButton.MouseButton1Click:Connect(onToggle)
-
--- Set initial button color
-updateButtonColor()
-
--- Add status indicator dot
-local statusDot = Instance.new("Frame")
-statusDot.Name = "StatusDot"
-statusDot.Size = UDim2.new(0, 12, 0, 12)
-statusDot.Position = UDim2.new(1, -18, 0, 6)
-statusDot.BackgroundColor3 = Color3.fromRGB(220, 30, 30) -- Red (inactive)
-statusDot.BorderSizePixel = 0
-statusDot.Parent = mainFrame
-
-local dotCorner = Instance.new("UICorner")
-dotCorner.CornerRadius = UDim.new(1, 0)
-dotCorner.Parent = statusDot
-
--- Update status dot color function
-local function updateStatusDot()
-    if batAimbotEnabled then
-        statusDot.BackgroundColor3 = Color3.fromRGB(50, 200, 50) -- Green (active)
-    else
-        statusDot.BackgroundColor3 = Color3.fromRGB(220, 30, 30) -- Red (inactive)
-    end
-end
-
--- Override existing toggle function to update both
-local originalToggle = toggleBatAimbot
-toggleBatAimbot = function()
-    originalToggle()
-    updateButtonColor()
-    updateStatusDot()
-end
-
--- Initial update
-updateStatusDot()
-
--- Optional: Add a small shadow effect
-local shadow = Instance.new("Frame")
-shadow.Name = "Shadow"
-shadow.Size = UDim2.new(1, 5, 1, 5)
-shadow.Position = UDim2.new(0, -2, 0, -2)
-shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-shadow.BackgroundTransparency = 0.7
-shadow.BorderSizePixel = 0
-shadow.ZIndex = 0
-shadow.Parent = mainFrame
-
-local shadowCorner = Instance.new("UICorner")
-shadowCorner.CornerRadius = UDim.new(0, 6)
-shadowCorner.Parent = shadow
-
--- Bring shadow to back
-shadow:MoveToBack()
-
-print("Bat Aimbot GUI Loaded! Click 'BAT LOCK' to toggle aimbot")
+print("✅ Boutons corrigés ! Plus de hitbox et feedback visuel")
