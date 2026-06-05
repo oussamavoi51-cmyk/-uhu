@@ -1,0 +1,177 @@
+-- ============================================
+-- BAT AIMBOT GUI
+-- ============================================
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BatAimbotGUI"
+screenGui.Parent = Player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
+
+-- Main Frame (Draggable)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 200, 0, 60)
+mainFrame.Position = UDim2.new(0.5, -100, 0.85, -30)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+mainFrame.Parent = screenGui
+
+-- Title Bar (for dragging)
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 25)
+titleBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+titleBar.BackgroundTransparency = 0.2
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+-- Title Text
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1, 0, 1, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "⚾ BAT AIMBOT ⚾"
+titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.TextScaled = true
+titleText.Font = Enum.Font.GothamBold
+titleText.TextWrapped = true
+titleText.Parent = titleBar
+
+-- Button Frame
+local buttonFrame = Instance.new("Frame")
+buttonFrame.Name = "ButtonFrame"
+buttonFrame.Size = UDim2.new(1, -20, 0, 35)
+buttonFrame.Position = UDim2.new(0, 10, 0, 30)
+buttonFrame.BackgroundTransparency = 1
+buttonFrame.Parent = mainFrame
+
+-- Toggle Button
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(1, 0, 1, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(220, 30, 30) -- Red (inactive)
+toggleButton.BorderSizePixel = 2
+toggleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Text = "🔒 BAT LOCK"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextScaled = true
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Parent = buttonFrame
+
+-- Add corner rounding
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 5)
+uiCorner.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 5)
+titleCorner.Parent = titleBar
+
+-- Dragging functionality
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Update button color function
+local function updateButtonColor()
+    if batAimbotEnabled then
+        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50) -- Green (active)
+        toggleButton.Text = "🔓 BAT LOCK [ON]"
+    else
+        toggleButton.BackgroundColor3 = Color3.fromRGB(220, 30, 30) -- Red (inactive)
+        toggleButton.Text = "🔒 BAT LOCK [OFF]"
+    end
+end
+
+-- Toggle function
+local function onToggle()
+    toggleBatAimbot()
+    updateButtonColor()
+end
+
+-- Connect button click
+toggleButton.MouseButton1Click:Connect(onToggle)
+
+-- Set initial button color
+updateButtonColor()
+
+-- Add status indicator dot
+local statusDot = Instance.new("Frame")
+statusDot.Name = "StatusDot"
+statusDot.Size = UDim2.new(0, 12, 0, 12)
+statusDot.Position = UDim2.new(1, -18, 0, 6)
+statusDot.BackgroundColor3 = Color3.fromRGB(220, 30, 30) -- Red (inactive)
+statusDot.BorderSizePixel = 0
+statusDot.Parent = mainFrame
+
+local dotCorner = Instance.new("UICorner")
+dotCorner.CornerRadius = UDim.new(1, 0)
+dotCorner.Parent = statusDot
+
+-- Update status dot color function
+local function updateStatusDot()
+    if batAimbotEnabled then
+        statusDot.BackgroundColor3 = Color3.fromRGB(50, 200, 50) -- Green (active)
+    else
+        statusDot.BackgroundColor3 = Color3.fromRGB(220, 30, 30) -- Red (inactive)
+    end
+end
+
+-- Override existing toggle function to update both
+local originalToggle = toggleBatAimbot
+toggleBatAimbot = function()
+    originalToggle()
+    updateButtonColor()
+    updateStatusDot()
+end
+
+-- Initial update
+updateStatusDot()
+
+-- Optional: Add a small shadow effect
+local shadow = Instance.new("Frame")
+shadow.Name = "Shadow"
+shadow.Size = UDim2.new(1, 5, 1, 5)
+shadow.Position = UDim2.new(0, -2, 0, -2)
+shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+shadow.BackgroundTransparency = 0.7
+shadow.BorderSizePixel = 0
+shadow.ZIndex = 0
+shadow.Parent = mainFrame
+
+local shadowCorner = Instance.new("UICorner")
+shadowCorner.CornerRadius = UDim.new(0, 6)
+shadowCorner.Parent = shadow
+
+-- Bring shadow to back
+shadow:MoveToBack()
+
+print("Bat Aimbot GUI Loaded! Click 'BAT LOCK' to toggle aimbot")
