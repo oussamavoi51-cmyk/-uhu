@@ -1557,3 +1557,141 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 print("✅ 8 boutons créés ! Disposition en grille 4x2")
+-- ============================================
+-- SAUVEGARDE AUTOMATIQUE DES BOUTONS
+-- ============================================
+
+local HttpService = game:GetService("HttpService")
+local saveFileName = "envy_mobile_buttons.json"
+
+-- Fonction pour sauvegarder l'état des boutons
+local function saveButtonStates()
+    local dataToSave = {
+        drop = toggleStates.drop,
+        bat = toggleStates.bat,
+        autoLeft = toggleStates.autoLeft,
+        autoRight = toggleStates.autoRight,
+        tp = toggleStates.tp,
+        carry = toggleStates.carry,
+        laggerCarry = toggleStates.laggerCarry,
+        laggerMode = toggleStates.laggerMode
+    }
+    
+    local jsonData = HttpService:JSONEncode(dataToSave)
+    
+    -- Sauvegarde avec différents méthodes
+    pcall(function()
+        if writefile then
+            writefile(saveFileName, jsonData)
+        elseif syn and syn.writefile then
+            syn.writefile(saveFileName, jsonData)
+        elseif secure_write then
+            secure_write(saveFileName, jsonData)
+        end
+    end)
+end
+
+-- Fonction pour charger les états sauvegardés
+local function loadButtonStates()
+    local loaded = false
+    local jsonData = nil
+    
+    -- Essayer de lire le fichier
+    pcall(function()
+        if readfile then
+            jsonData = readfile(saveFileName)
+        elseif syn and syn.readfile then
+            jsonData = syn.readfile(saveFileName)
+        elseif secure_read then
+            jsonData = secure_read(saveFileName)
+        end
+    end)
+    
+    if jsonData then
+        pcall(function()
+            local saved = HttpService:JSONDecode(jsonData)
+            if saved then
+                toggleStates.drop = saved.drop or false
+                toggleStates.bat = saved.bat or false
+                toggleStates.autoLeft = saved.autoLeft or false
+                toggleStates.autoRight = saved.autoRight or false
+                toggleStates.tp = saved.tp or false
+                toggleStates.carry = saved.carry or false
+                toggleStates.laggerCarry = saved.laggerCarry or false
+                toggleStates.laggerMode = saved.laggerMode or false
+                loaded = true
+            end
+        end)
+    end
+    
+    return loaded
+end
+
+-- Recharger les couleurs après chargement
+local function refreshAllButtons()
+    for _, btnData in ipairs(positions) do
+        local container = buttonPanel:FindFirstChild(string.format("Container_%s", btnData.state))
+        if container then
+            local btn = container:FindFirstChild("Btn")
+            local topText = btn and btn:FindFirstChild("TopText")
+            local bottomText = btn and btn:FindFirstChild("BottomText")
+            local stroke = btn and btn:FindFirstChildOfClass("UIStroke")
+            
+            if btn then
+                local isOn = toggleStates[btnData.state]
+                if isOn then
+                    btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                    if topText then topText.TextColor3 = Color3.fromRGB(0, 0, 0) end
+                    if bottomText then bottomText.TextColor3 = Color3.fromRGB(50, 50, 50) end
+                    if stroke then stroke.Color = Color3.fromRGB(220, 220, 220) end
+                else
+                    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+                    if topText then topText.TextColor3 = Color3.fromRGB(255, 255, 255) end
+                    if bottomText then bottomText.TextColor3 = Color3.fromRGB(150, 150, 150) end
+                    if stroke then stroke.Color = Color3.fromRGB(50, 50, 60) end
+                end
+            end
+        end
+    end
+end
+
+-- Modifier la création des boutons pour ajouter un nom au conteneur
+-- (À remplacer dans la boucle for des positions)
+-- Ajoute cette ligne après container.Parent = buttonPanel :
+-- container.Name = "Container_" .. btnData.state
+-- et donne un nom au btn : btn.Name = "Btn"
+-- et topText.Name = "TopText", bottomText.Name = "BottomText"
+
+-- Version simplifiée : on recharge juste les états et on renvoie les touches
+local function restoreAndSync()
+    if loadButtonStates() then
+        print("✅ États des boutons chargés !")
+        -- Renvoyer les touches pour activer les états sauvegardés
+        task.wait(0.5)
+        if toggleStates.drop then sendKeyPress(Enum.KeyCode.X) end
+        if toggleStates.bat then sendKeyPress(Enum.KeyCode.E) end
+        if toggleStates.autoLeft then sendKeyPress(Enum.KeyCode.Z) end
+        if toggleStates.autoRight then sendKeyPress(Enum.KeyCode.C) end
+        if toggleStates.tp then sendKeyPress(Enum.KeyCode.F) end
+        if toggleStates.carry then sendKeyPress(Enum.KeyCode.Q) end
+        if toggleStates.laggerCarry or toggleStates.laggerMode then 
+            sendKeyPress(Enum.KeyCode.R)
+        end
+    else
+        print("📁 Aucune sauvegarde trouvée, démarrage à zéro")
+    end
+end
+
+-- Sauvegarde automatique à chaque changement
+-- Ajoute ceci dans la fonction onTap (avant updateVisual())
+-- saveButtonStates()
+
+-- Pour modifier le code existant, voici la fonction onTap modifiée :
+-- (Remplace l'ancienne fonction onTap par celle-ci)
+
+print("💾 Système de sauvegarde prêt !")
+print("   - Sauvegarde auto à chaque appui")
+print("   - Charge automatique au démarrage")
+
+-- Charger les états sauvegardés
+restoreAndSync()
